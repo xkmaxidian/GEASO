@@ -9,6 +9,14 @@ Here,  we introduce GEASO (Graph-based Elastic Alignment for Spatial-Omics data)
 
 
 
+## Tutorial
+
+The tutorial for slice alignment (with local non-rigid transformation) is accessible from : 
+
+https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/alignment_nonrigid.ipynb
+
+
+
 #### Compared slice-to-volume algorithms
 
 Algorithms that are compared include: 
