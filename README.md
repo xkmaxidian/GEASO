@@ -28,7 +28,6 @@ Note: If you have an NVIDIA GPU, be sure to firstly install a version of PyTorch
 ```
 conda create --name GEASO python=3.9
 conda activate GEASO
-pip install GEASOpy
 ```
 
 (Optional) To run the notebook files in tutorials, please ensure the Jupyter package is installed in your environment:
