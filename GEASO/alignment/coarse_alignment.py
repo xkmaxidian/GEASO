@@ -87,20 +87,20 @@ def inlier_from_NN(x, y, distance, max_iter=100, gamma=0.5, scale_c=False):
 
 def coarse_alignment(source, target, top_K=10, dis_metric='kl', use_latent=False, scale_c=False):
     scales, means, coords = normalize_coords(source.obsm['spatial'].copy(), target.obsm['spatial'].copy(), dims=2)
-    print(scales, means)
+    # print(scales, means)
     source_coord = coords[0]
     target_coord = coords[1]
     M, N, D = source_coord.shape[0], target_coord.shape[0], target_coord.shape[1]
     if use_latent:
         coors1, exp1 = voxel_data(coords=source_coord, gene_exp=source.obsm['latent'],
-                                  voxel_num=max(min(int(N / 5), 1000), 1000))
+                                  voxel_num=max(min(int(N / 5), 3000), 1000))
         coors2, exp2 = voxel_data(coords=target_coord, gene_exp=target.obsm['latent'],
-                                  voxel_num=max(min(int(M / 5), 1000), 1000))
+                                  voxel_num=max(min(int(M / 5), 3000), 1000))
     else:
         coors1, exp1 = voxel_data(coords=source_coord, gene_exp=source.X.A,
-                                  voxel_num=max(min(int(N / 5), 1000), 1000))
+                                  voxel_num=max(min(int(N / 5), 3000), 1000))
         coors2, exp2 = voxel_data(coords=target_coord, gene_exp=target.X.A,
-                                  voxel_num=max(min(int(M / 5), 1000), 1000))
+                                  voxel_num=max(min(int(M / 5), 3000), 1000))
 
     exp_dist = cal_distance(exp1, exp2, metric=dis_metric)
     item2 = np.argpartition(exp_dist, top_K, axis=0)[: top_K, :].T
@@ -121,4 +121,6 @@ def coarse_alignment(source, target, top_K=10, dis_metric='kl', use_latent=False
                                                                             max_iter=100, scale_c=scale_c)
     coarse_source = scale * (source_coord @ R.T) + t
     coarse_target = target_coord.copy()
+
+    train_x = scale * (train_x @ R.T) + t
     return R, t, scale, P, scales, means, train_x, train_y, coarse_source, coarse_target

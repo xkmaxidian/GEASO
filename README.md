@@ -9,11 +9,51 @@ Here,  we introduce GEASO (Graph-based Elastic Alignment for Spatial-Omics data)
 
 
 
+## Update
+
+**2025-08-24: We add figure code to draw figures**
+
+**2025-08-25: The GEASO Python package is now released on Pypi!**
+
+**2025-08-26: We upload tutorials for using GEASO to reconstruct 3D mouse brain.**
+
+
+
+## Installation
+
+Note: If you have an NVIDIA GPU, be sure to firstly install a version of PyTorch that supports it (We recommend Pytorch >= 2.0.1). When installing GEASO without install Pytorch previous, the CPU version of torch will be installed by default for you. [Here is the installation guide of PyTorch](https://pytorch.org/get-started/locally/).
+
+#### 1. Start by using python virtual environment with [conda](https://anaconda.org/):
+
+```
+conda create --name GEASO python=3.9
+conda activate GEASO
+pip install GEASOpy
+```
+
+(Optional) To run the notebook files in tutorials, please ensure the Jupyter package is installed in your environment:
+
+```
+conda install -n geaso ipykernel
+python -m ipykernel install --user --name geaso --display-name geaso-jupyter
+```
+
+#### 2. Clone from Github (We are developing Pypi package of GEASO, it will be released soon):
+
+```
+git clone https://github.com/xkmaxidian/GEASO
+cd <your dir path>/GEASO
+```
+
+
+
 ## Tutorial
 
-The tutorial for slice alignment (with local non-rigid transformation) is accessible from : 
+1. The tutorial for slice alignment (with local non-rigid transformation) is accessible from : https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/alignment_nonrigid.ipynb
 
-https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/alignment_nonrigid.ipynb
+2. The tutorial for slice stitch (with partial overlap) is accessible from : https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/stitch_partial_overlap.ipynb
+
+
 
 
 
@@ -32,7 +72,7 @@ Algorithms that are compared include:
 
 We are continuing adding new features. Bug reports or feature requests are welcome.
 
-Last update: 07/22/2025, version 0.0.1
+Last update: 08/25/2025, version 0.1.1
 
 Please send any questions or found bugs to Xiaoke Ma [xkma@xidian.edu.cn](mailto:xkma@xidian.edu.cn).
 

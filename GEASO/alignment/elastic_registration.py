@@ -26,7 +26,7 @@ class ElasticRegistration:
             guided_target,
             source_slice: AnnData,
             target_slice: AnnData,
-            nn_init_weight: float = 0.1,
+            nn_init_weight: float = 1.0,
             rep_layer: str = 'latent',
             rep_field: str = 'obsm',
             genes: Optional[Union[List[str], np.ndarray, torch.Tensor]] = None,
@@ -50,10 +50,11 @@ class ElasticRegistration:
             K: int = 100,
             kernel_bandwidth: float = 1e-2,
             graph_knn: int = 10,
+            tau=0.2,
             gamma: float = 0.5,
 
             kappa: Union[float, np.ndarray] = 1.0,
-            partial_robust_level: float = 10,
+            partial_robust_level: float = 50,
             normalize_spatial: bool = True,
             separate_mean: bool = True,
             separate_scale: bool = False,
@@ -89,6 +90,7 @@ class ElasticRegistration:
         self.beta = beta
         self.K = K
         self.kernel_bandwidth = kernel_bandwidth
+        self.tau = tau
         self.gamma = gamma
 
         self.graph_knn = graph_knn
@@ -126,7 +128,8 @@ class ElasticRegistration:
             self.pre_comp_dist = False
 
         # construct motion kernel
-        self.construct_kernel(inducing_num=K)
+        self.construct_kernel(inducing_num=self.K)
+
         # initialize variables
         if self.rep_field == 'layer':
             self.source_exp = self.source_slice.layers[self.rep_layer]
@@ -151,17 +154,19 @@ class ElasticRegistration:
         self.source_exp = torch.from_numpy(self.source_exp).to(device=device, dtype=torch.float32)
         self.target_exp = torch.from_numpy(self.target_exp).to(device=device, dtype=torch.float32)
 
+        # filter initial correspondences, inspired by Spateo
         inlier_threshold = min(self.init_P[np.argsort(-self.init_P[:, 0])[20], 0], 0.5)
         inlier_set = np.where(self.init_P[:, 0] > inlier_threshold)[0]
         self.inlier_P = self.init_P[inlier_set, :]
         self.inlier_source = self.guided_source[inlier_set, :]
         self.inlier_target = self.guided_target[inlier_set, :]
+        # convert to torch
         self.inlier_P = to_torch(self.inlier_P, device=self.device, dtype=self.dtype)
         self.inlier_source = to_torch(self.inlier_source, device=self.device, dtype=self.dtype)
         self.inlier_target = to_torch(self.inlier_target, device=self.device, dtype=self.dtype)
 
         # execute elastic registration, assume the coarse alignment has been done
-        self.P = self.elastic_registratin()
+        self.P = self.elastic_registration()
         self.source_slice.obsm['aligned_spatial_rigid'] = self.optimal_transformed
         self.source_slice.obsm['aligned_spatial_nonrigid'] = self.source_transformed
 
@@ -181,7 +186,7 @@ class ElasticRegistration:
                           Y_idx=inducing_variables_idx, beta=self.kernel_bandwidth, k=self.graph_knn)
         euc_U = con_K_euc(X=self.source_slice.obsm[self.spatial_key],
                           Y=inducing_variables, beta=self.kernel_bandwidth)
-        self.GXU = (1 - self.gamma) * euc_U + self.gamma * geo_U
+        self.GXU = (1 - self.tau) * euc_U + self.tau * geo_U
         self.GUU = self.GXU[inducing_variables_idx, :]
         self.K = inducing_variables.shape[0]
         self.GXU = to_torch(self.GXU, device=self.device, dtype=self.dtype)
@@ -197,10 +202,10 @@ class ElasticRegistration:
         self.batch_idx = self.batch_idx.cpu().numpy().astype(int)
         self.batch_perm = torch.roll(self.batch_perm, self.batch_size)
 
-    def elastic_registratin(self):
+    def elastic_registration(self):
         # record results of each iteration
         # such as: if coarse, self.init_params = {'sigma2': sigma2, 'rotation': rotation, 'translation': translation}
-        # 然后传入self.rotation, self.translation, self.scale, self.sigma2等
+        # set self.rotation, self.translation, self.scale, self.sigma2, respectively.
         if (not self.SVI_mode) or (self.pre_comp_dist):
             self.exp_layer_dist = cal_distance(X=self.source_exp.cpu().numpy(), Y=self.target_exp.cpu().numpy(), metric=self.dissimilarity)
             self.exp_layer_dist = to_torch(self.exp_layer_dist, device=self.device, dtype=self.dtype)
@@ -277,9 +282,10 @@ class ElasticRegistration:
         self.sigma2_variance_end = to_torch(self.sigma2_variance_end, device=self.device, dtype=self.dtype)
         self.sigma2_variance_decrease = to_torch(self.sigma2_variance_decrease, device=self.device, dtype=self.dtype)
 
-        self.kappa = np.ones([n_source]) * 1.0
+        self.kappa = np.ones([n_source])
         self.alpha = np.ones([n_source])
-        self.gamma, self.gamma_a, self.gamma_b = (np.array(0.5), np.array(1.0), np.arange(1.0))
+        self.gamma, self.gamma_a, self.gamma_b = (np.array(0.5), np.array(1.0), np.array(1.0))
+
         self.kappa = to_torch(self.kappa, device=self.device, dtype=self.dtype)
         self.alpha = to_torch(self.alpha, device=self.device, dtype=self.dtype)
         self.gamma = to_torch(self.gamma, device=self.device, dtype=self.dtype)
@@ -306,10 +312,9 @@ class ElasticRegistration:
         self.coff = to_torch(self.coff, device=self.device, dtype=self.dtype)
 
         self.sigma_diag = np.zeros([n_source])
-        self.sigma_diag = to_torch(self.sigma_diag, device=self.device, dtype=self.dtype)
-
         self.rotation = np.identity(n_dims)
         self.C = np.identity(n_dims)
+        self.sigma_diag = to_torch(self.sigma_diag, device=self.device, dtype=self.dtype)
         self.rotation = to_torch(self.rotation, device=self.device, dtype=self.dtype)
         self.C = to_torch(self.C, device=self.device, dtype=self.dtype)
 
@@ -397,6 +402,8 @@ class ElasticRegistration:
 
         digamma_diff = torch.special.digamma(self.gamma_a + self.Sp_spatial) - torch.special.digamma(total)
         new_gamma = torch.exp(digamma_diff)
+
+        # constraint gamma in [0.01, 0.99]
         self.gamma = torch.clamp(new_gamma, min=self.gamma1, max=self.gamma99)
 
     def update_alpha(self):
@@ -438,27 +445,30 @@ class ElasticRegistration:
             torch.matmul(self.K_NA.unsqueeze(0), self.coords_source),
             torch.matmul(self.K_NA.unsqueeze(0), self.displacement_source),
             torch.matmul(self.K_NB.unsqueeze(0), self.coords_target[self.batch_idx])
-            if self.SVI_mode
-            else torch.matmul(self.K_NB.unsqueeze(0), self.coords_target)
-        )
+            if self.SVI_mode else torch.matmul(self.K_NB.unsqueeze(0), self.coords_target))
+
         # solve rotation using SVD formula
-        denom = self.Sp
         init_coef = self.sigma2 * self.nn_init_weight * self.Sp / torch.sum(self.inlier_P)
         # PXB, PXA, denom all get an nn_init term
         PXB = PXB + init_coef * torch.matmul(self.inlier_P.T, self.inlier_target)
         PXA = PXA + init_coef * torch.matmul(self.inlier_P.T, self.inlier_source)
-        denom = denom + init_coef * torch.sum(self.inlier_P)
+        denom = self.Sp + init_coef * torch.sum(self.inlier_P)
+
         mu_XB = PXB / denom
         mu_XA = PXA / denom
-        mu_Vn = PVA / denom
+        mu_Vn = PVA / self.Sp
 
-        XA_hat = self.coords_source - mu_XA
+        source_hat = self.coords_source - mu_XA
         VnA_hat = self.displacement_source - mu_Vn
         XB_hat = (self.coords_target[self.batch_idx] - mu_XB) if self.SVI_mode else (self.coords_target - mu_XB)
 
-        term1 = torch.matmul((XA_hat * self.K_NA.unsqueeze(1)).T, VnA_hat)
-        term2 = torch.matmul(XA_hat.T, torch.matmul(self.P, XB_hat))
+        inlier_source_hat = self.inlier_source - mu_XA
+        inlier_target_hat = self.inlier_target - mu_XB
+        term1 = torch.matmul((source_hat * self.K_NA.unsqueeze(1)).T, VnA_hat)
+        term2 = torch.matmul(source_hat.T, torch.matmul(self.P, XB_hat))
         A = -(term1 - term2).T
+        A = A - init_coef * torch.matmul((inlier_source_hat * self.inlier_P).T, -inlier_target_hat).T
+
         U, S, Vh = torch.linalg.svd(A)
         self.C[-1, -1] = torch.det(torch.matmul(U, Vh))
         R_new = torch.matmul(U @ self.C, Vh)
@@ -470,7 +480,10 @@ class ElasticRegistration:
 
         # 9) Solve for translation: t = (PXB - PVA - PXA Rᵀ) / denom
         t_numer = PXB - PVA - torch.matmul(PXA, self.rotation.T)
-        t_new = t_numer / denom
+        t_numer += init_coef * torch.matmul(self.inlier_P.T, self.inlier_target - torch.matmul(self.inlier_source, self.rotation.T))
+        t_deno = self.Sp + init_coef * torch.sum(self.inlier_P)
+        t_new = t_numer / t_deno
+
         if self.SVI_mode and self.step_size < 1.0:
             self.t = self.step_size * t_new + (1 - self.step_size) * self.t
         else:
@@ -483,11 +496,11 @@ class ElasticRegistration:
         dot = torch.einsum("i,i->", self.K_NA_sigma2, self.sigma_diag)
         q = self.sigma2_related + dot / self.Sp_sigma2
 
-        # 2) Enforce a lower bound of 1e-3
+        # Enforce a lower bound of 1e-3
         min_val = torch.tensor(1e-3, device=q.device, dtype=q.dtype)
         self.sigma2 = torch.maximum(q, min_val)
 
-        # 3) Decay sigma2_variance with an upper bound
+        # Decay sigma2_variance with an upper bound
         self.sigma2_variance = torch.minimum(
             self.sigma2_variance * self.sigma2_variance_decrease,
             self.sigma2_variance_end
@@ -554,7 +567,6 @@ def get_P_core(
     spatial_prob = cal_probability(
         distance_matrix=spatial_dist, probability_type="gauss", probability_parameter=sigma2 / sigma2_variance)
     outlier_s = samples_s * spatial_dist.shape[0]
-    # outlier_s = samples_s
     spatial_outlier = torch.pow((2 * torch.pi * sigma2), (Dim / 2)) * (1 - gamma) / (gamma * outlier_s)  # scalar
 
     denom = spatial_outlier + torch.sum(spatial_prob, dim=0, keepdim=True)
