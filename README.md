@@ -11,11 +11,9 @@ Here,  we introduce GEASO (Graph-based Elastic Alignment for Spatial-Omics data)
 
 ## Update
 
-**2025-08-24: We add figure code to draw figures**
+**2025-08-16: We are developing python package of GEASO**
 
-**2025-08-25: The GEASO Python package is now released on Pypi!**
-
-**2025-08-26: We upload tutorials for using GEASO to reconstruct 3D mouse brain.**
+**2025-08-28: We upload tutorials for using GEASO to reconstruct 3D human lymph node slices sequenced by OpenST.**
 
 
 
@@ -52,7 +50,7 @@ cd <your dir path>/GEASO
 
 2. The tutorial for slice stitch (with partial overlap) is accessible from : https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/stitch_partial_overlap.ipynb
 
-
+3. The tutorial for slice-to-volume 3D reconstruction is accessible from: https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/OpenST_3D_Rec.ipynb
 
 
 
