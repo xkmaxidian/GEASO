@@ -15,6 +15,14 @@ Here,  we introduce GEASO (Graph-based Elastic Alignment for Spatial-Omics data)
 
 **2025-08-28: We upload tutorials for using GEASO to reconstruct 3D human lymph node slices sequenced by OpenST.**
 
+**2025-09-02: We complete the runtime and memory usage comparison.**
+
+
+
+## Benchmark (runtime / memory)
+
+It is easy to observe that, compared with the baseline algorithms, **GEASO** achieves the best performance while maintaining a relatively fast runtime (second only to **Spateo**) and a relatively low memory consumption (second only to **SLAT**).![GEASO workflow](docs/Time_Memory_Benchmark.png)
+
 
 
 ## Installation
