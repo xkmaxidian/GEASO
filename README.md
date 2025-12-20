@@ -1,5 +1,5 @@
 # GEASO
-#### Source code and detailed tutorials for "Network models for alignment, stitching and slice-to-volume 3D reconstruction of large-scale spatially resolved slices"
+#### Source code and detailed tutorials for "Network model for alignment, stitching and slice-to-volume 3D reconstruction of large-scale spatially resolved slices"
 
 ####  Yu Wang, Zaiyi Liu, Xiaoke Ma
 
@@ -16,6 +16,8 @@ Here,  we introduce GEASO (Graph-based Elastic Alignment for Spatial-Omics data)
 **2025-08-28: We upload tutorials for using GEASO to reconstruct 3D human lymph node slices sequenced by OpenST.**
 
 **2025-09-02: We complete the runtime and memory usage comparison.**
+
+**2025-12-20: We upload tutorials using GEASO to stich DLPFC slices**
 
 
 
@@ -58,9 +60,11 @@ cd <your dir path>/GEASO
 
 2. The tutorial for slice stitch (with partial overlap) is accessible from : https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/stitch_partial_overlap.ipynb
 
-3. The tutorial for slice-to-volume 3D reconstruction is accessible from: https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/OpenST_3D_Rec.ipynb
+3. The tutorial for stitching DLPFC slices (with partial overlap) is accessible from: https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/DLPFC_Stitch.ipynb
 
+4. The tutorial for slice-to-volume 3D reconstruction is accessible from: https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/OpenST_3D_Rec.ipynb
 
+   
 
 #### Compared slice-to-volume algorithms
 
@@ -72,12 +76,14 @@ Algorithms that are compared include:
 * [Moscot](https://github.com/theislab/moscot)
 * [CAST](https://github.com/wanglab-broad/CAST)
 * [Spateo](https://github.com/aristoteleo/spateo-release)
+* [SPACEL](https://github.com/QuKunLab/SPACEL)
+* [STAlign](https://github.com/JEFworks-Lab/STalign)
 
 ### Contact:
 
 We are continuing adding new features. Bug reports or feature requests are welcome.
 
-Last update: 08/25/2025, version 0.1.1
+Last update: 12/20/2025, version 0.2.0
 
 Please send any questions or found bugs to Xiaoke Ma [xkma@xidian.edu.cn](mailto:xkma@xidian.edu.cn).
 
