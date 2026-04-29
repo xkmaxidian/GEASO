@@ -19,11 +19,7 @@ Here,  we introduce GEASO (Graph-based Elastic Alignment for Spatial-Omics data)
 
 **2025-12-20: We upload tutorials using GEASO to stich DLPFC slices**
 
-
-
-## Benchmark (runtime / memory)
-
-It is easy to observe that, compared with the baseline algorithms, **GEASO** achieves the best performance while maintaining a relatively fast runtime (second only to **Spateo**) and a relatively low memory consumption (second only to **SLAT**).![GEASO workflow](docs/Time_Memory_Benchmark.png)
+**2026-04-29: We upload interpolate related code and tutorials**
 
 
 
@@ -64,6 +60,8 @@ cd <your dir path>/GEASO
 
 4. The tutorial for slice-to-volume 3D reconstruction is accessible from: https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/OpenST_3D_Rec.ipynb
 
+5. The tutorial for down-sample and interpolate is accessible from: https://github.com/xkmaxidian/GEASO/blob/master/Tutorials/coarse_to_fine_alignment_usage.ipynb
+
    
 
 #### Compared slice-to-volume algorithms
@@ -83,10 +81,12 @@ Algorithms that are compared include:
 
 We are continuing adding new features. Bug reports or feature requests are welcome.
 
-Last update: 12/20/2025, version 0.2.0
+Last update: 04/29/2026, version 0.3.0
 
 Please send any questions or found bugs to Xiaoke Ma [xkma@xidian.edu.cn](mailto:xkma@xidian.edu.cn).
 
 ### Reference
 
-- Our paper is under review.
+- Please consider citing the following reference:
+
+  - [https://www.nature.com/articles/s41467-026-71042-6](https://doi.org/10.1038/s41467-026-71042-6)
