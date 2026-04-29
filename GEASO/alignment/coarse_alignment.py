@@ -4,6 +4,14 @@ from GEASO.utils.utils import normalize_coords
 from GEASO.utils.utils import cal_distance
 
 
+def _to_numpy_matrix(x):
+    if hasattr(x, "A"):
+        return x.A
+    if hasattr(x, "toarray"):
+        return x.toarray()
+    return np.asarray(x)
+
+
 def inlier_from_NN(x, y, distance, max_iter=100, gamma=0.5, scale_c=False):
     # x: source coordinates, shape (N, D)
     # y: target coordinates, shape (N, D)
@@ -97,19 +105,22 @@ def coarse_alignment(source, target, top_K=10, dis_metric='kl', use_latent=False
         coors2, exp2 = voxel_data(coords=target_coord, gene_exp=target.obsm['latent'],
                                   voxel_num=max(min(int(M / 5), 3000), 1000))
     else:
-        coors1, exp1 = voxel_data(coords=source_coord, gene_exp=source.X.A,
+        coors1, exp1 = voxel_data(coords=source_coord, gene_exp=_to_numpy_matrix(source.X),
                                   voxel_num=max(min(int(N / 5), 3000), 1000))
-        coors2, exp2 = voxel_data(coords=target_coord, gene_exp=target.X.A,
+        coors2, exp2 = voxel_data(coords=target_coord, gene_exp=_to_numpy_matrix(target.X),
                                   voxel_num=max(min(int(M / 5), 3000), 1000))
 
     exp_dist = cal_distance(exp1, exp2, metric=dis_metric)
-    item2 = np.argpartition(exp_dist, top_K, axis=0)[: top_K, :].T
-    item1 = np.repeat(np.arange(exp_dist.shape[1])[:, None], top_K, axis=1)
+    top_K_axis0 = min(top_K, exp_dist.shape[0])
+    top_K_axis1 = min(top_K, exp_dist.shape[1])
+
+    item2 = np.argpartition(exp_dist, top_K_axis0 - 1, axis=0)[: top_K_axis0, :].T
+    item1 = np.repeat(np.arange(exp_dist.shape[1])[:, None], top_K_axis0, axis=1)
     NN1 = np.dstack((item1, item2)).reshape((-1, 2))
     distance1 = exp_dist.T[NN1[:, 0], NN1[:, 1]]
 
-    item1 = np.argpartition(exp_dist, top_K, axis=1)[:, : top_K]
-    item2 = np.repeat(np.arange(exp_dist.shape[0])[:, None], top_K, axis=1)
+    item1 = np.argpartition(exp_dist, top_K_axis1 - 1, axis=1)[:, : top_K_axis1]
+    item2 = np.repeat(np.arange(exp_dist.shape[0])[:, None], top_K_axis1, axis=1)
     NN2 = np.dstack((item1, item2)).reshape((-1, 2))
     distance2 = exp_dist.T[NN2[:, 0], NN2[:, 1]]
 

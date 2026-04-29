@@ -122,7 +122,8 @@ class ElasticRegistration:
         valid_metrics = ["gauss", "gaussian", "cos", "cosine", "prob"]
         self.probability_type = self.probability_type
         if self.probability_type not in valid_metrics:
-            raise ValueError(f"Invalid `metric` value: {probability_type}. Available `metrics` are: " f"{', '.join(valid_metrics)}.")
+            raise ValueError(
+                f"Invalid `metric` value: {probability_type}. Available `metrics` are: " f"{', '.join(valid_metrics)}.")
 
         if self.sparse_calculation_mode:
             self.pre_comp_dist = False
@@ -155,7 +156,8 @@ class ElasticRegistration:
         self.target_exp = torch.from_numpy(self.target_exp).to(device=device, dtype=torch.float32)
 
         # filter initial correspondences, inspired by Spateo
-        inlier_threshold = min(self.init_P[np.argsort(-self.init_P[:, 0])[20], 0], 0.5)
+        threshold_rank = min(20, self.init_P.shape[0] - 1)
+        inlier_threshold = min(self.init_P[np.argsort(-self.init_P[:, 0])[threshold_rank], 0], 0.5)
         inlier_set = np.where(self.init_P[:, 0] > inlier_threshold)[0]
         self.inlier_P = self.init_P[inlier_set, :]
         self.inlier_source = self.guided_source[inlier_set, :]
@@ -191,12 +193,12 @@ class ElasticRegistration:
         self.K = inducing_variables.shape[0]
         self.GXU = to_torch(self.GXU, device=self.device, dtype=self.dtype)
         self.GUU = to_torch(self.GUU, device=self.device, dtype=self.dtype)
-        print('Local structure kernel constructed with shape:', self.GXU.shape)
+        if self.verbose:
+            print('Local structure kernel constructed with shape:', self.GXU.shape)
 
     def update_batch(self, epoch):
         decay_val = self.SVI_decay / (epoch + 1.0)
-        one = torch.tensor(1.0, device=self.SVI_decay.device, dtype=self.SVI_decay.dtype)
-        decay_val = torch.tensor(decay_val, device=self.SVI_decay.device, dtype=self.SVI_decay.dtype)
+        one = torch.ones((), device=self.SVI_decay.device, dtype=self.SVI_decay.dtype)
         self.step_size = torch.min(one, decay_val)
         self.batch_idx = self.batch_perm[: self.batch_size]
         self.batch_idx = self.batch_idx.cpu().numpy().astype(int)
@@ -207,7 +209,8 @@ class ElasticRegistration:
         # such as: if coarse, self.init_params = {'sigma2': sigma2, 'rotation': rotation, 'translation': translation}
         # set self.rotation, self.translation, self.scale, self.sigma2, respectively.
         if (not self.SVI_mode) or (self.pre_comp_dist):
-            self.exp_layer_dist = cal_distance(X=self.source_exp.cpu().numpy(), Y=self.target_exp.cpu().numpy(), metric=self.dissimilarity)
+            self.exp_layer_dist = cal_distance(X=self.source_exp.cpu().numpy(), Y=self.target_exp.cpu().numpy(),
+                                               metric=self.dissimilarity)
             self.exp_layer_dist = to_torch(self.exp_layer_dist, device=self.device, dtype=self.dtype)
 
         if self.iter_key_added is not None:
@@ -219,6 +222,7 @@ class ElasticRegistration:
             self.max_iter,
             desc="Slice Alignment",
             leave=True,
+            position=0,
             disable=not self.verbose,
         )
 
@@ -265,10 +269,11 @@ class ElasticRegistration:
         self.sigma2 = ((spatial_dist ** 2).sum() / (n_dims * sub_source.shape[0] * sub_target.shape[0])) * 0.1
         self.sigma2 = to_torch(self.sigma2, device=self.device, dtype=self.dtype)
 
-        if self.probability_type.lower() in ['gauss',  'gaussian']:
+        if self.probability_type.lower() in ['gauss', 'gaussian']:
             exp_dist = cal_distance(X=source_exp[sub_source], Y=target_exp[sub_target], metric=self.dissimilarity)
             min_exp_dist = np.min(exp_dist, axis=1)
-            self.probability_parameters = np.max([min_exp_dist[np.argsort(min_exp_dist)[int(sub_source.shape[0] * 0.05)]] / 5, 0.01])
+            self.probability_parameters = np.max(
+                [min_exp_dist[np.argsort(min_exp_dist)[int(sub_source.shape[0] * 0.05)]] / 5, 0.01])
             self.probability_parameters = to_torch(self.probability_parameters, device=self.device, dtype=self.dtype)
 
         self.sigma2_variance = 1
@@ -357,7 +362,7 @@ class ElasticRegistration:
 
         spatial_dist = cal_distance(
             X=self.source_transformed,
-            Y=self.coords_target[self.batch_idx, ] if self.SVI_mode else self.coords_target,
+            Y=self.coords_target[self.batch_idx,] if self.SVI_mode else self.coords_target,
             metric="euc",
         )
         if self.pre_comp_dist:
@@ -480,7 +485,8 @@ class ElasticRegistration:
 
         # 9) Solve for translation: t = (PXB - PVA - PXA Rᵀ) / denom
         t_numer = PXB - PVA - torch.matmul(PXA, self.rotation.T)
-        t_numer += init_coef * torch.matmul(self.inlier_P.T, self.inlier_target - torch.matmul(self.inlier_source, self.rotation.T))
+        t_numer += init_coef * torch.matmul(self.inlier_P.T,
+                                            self.inlier_target - torch.matmul(self.inlier_source, self.rotation.T))
         t_deno = self.Sp + init_coef * torch.sum(self.inlier_P)
         t_new = t_numer / t_deno
 
@@ -539,8 +545,10 @@ class ElasticRegistration:
 
         if self.normalize_spatial:
             self.source_transformed = self.source_transformed * self.normalize_scales[1] + self.normalize_means[1]
-            self.source_transformed_temp = self.source_transformed_temp * self.normalize_scales[1] + self.normalize_means[1]
+            self.source_transformed_temp = self.source_transformed_temp * self.normalize_scales[1] + \
+                                           self.normalize_means[1]
             self.optimal_transformed = self.optimal_transformed * self.normalize_scales[1] + self.normalize_means[1]
+
 
 def get_annealing_factor(start, end, max_iter):
     factor = np.power(end / start, 1 / max_iter)
